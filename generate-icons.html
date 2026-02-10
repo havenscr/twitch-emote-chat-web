@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate App Icons</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 { margin-bottom: 20px; }
+    p { color: #888; margin-bottom: 30px; }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 20px;
+    }
+    .icon-item {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .icon-item canvas {
+      border-radius: 20%;
+      margin-bottom: 10px;
+    }
+    .icon-item p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+    .icon-item a {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #9147ff;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .icon-item a:hover {
+      background: #772ce8;
+    }
+    .instructions {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 30px;
+    }
+    .instructions h2 { margin-bottom: 15px; }
+    .instructions ol {
+      padding-left: 20px;
+      color: #ccc;
+    }
+    .instructions li { margin-bottom: 10px; }
+    code {
+      background: #333;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>App Icon Generator</h1>
+  <p>Click to download PNG icons for the PWA manifest. Save them to <code>assets/icons/</code></p>
+
+  <div class="icon-grid" id="icon-grid"></div>
+
+  <div class="instructions">
+    <h2>Instructions</h2>
+    <ol>
+      <li>Click each "Download" button to save the PNG icon</li>
+      <li>Save files to <code>assets/icons/</code> folder with the exact filenames shown</li>
+      <li>Delete this file after generating icons (not needed in production)</li>
+    </ol>
+  </div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const iconGrid = document.getElementById('icon-grid');
+
+    // Load SVG
+    const svgUrl = 'assets/icons/icon.svg';
+
+    sizes.forEach(size => {
+      const item = document.createElement('div');
+      item.className = 'icon-item';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, size, size);
+
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `icon-${size}.png`;
+        link.textContent = 'Download';
+
+        item.appendChild(canvas);
+        item.innerHTML += `<p><strong>icon-${size}.png</strong></p><p>${size}x${size}px</p>`;
+        item.appendChild(link);
+      };
+      img.src = svgUrl;
+
+      iconGrid.appendChild(item);
+    });
+  </script>
+</body>
+</html>

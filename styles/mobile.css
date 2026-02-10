@@ -1,0 +1,371 @@
+/* Twitch Chat Web App - Mobile Responsive Styles */
+
+/* Portrait mode (default) - video on top, chat below */
+@media (max-width: 768px) {
+  .stream-container {
+    flex-direction: column;
+  }
+
+  .video-section {
+    flex: 0 0 auto;
+    height: 56.25vw; /* 16:9 aspect ratio */
+    max-height: 35vh;
+  }
+
+  .chat-section {
+    flex: 1;
+    margin-top: min(56.25vw, 35vh); /* Match mobile video height */
+  }
+
+  /* Stream info bar in portrait - match mobile video height */
+  .stream-info-bar {
+    margin-top: min(56.25vw, 35vh); /* Match mobile video height */
+  }
+
+  /* Remove chat margin when stream info is always visible */
+  /* Note: tap-visible uses absolute positioning so chat keeps its margin */
+  .stream-info-bar.always-visible + .chat-section {
+    margin-top: 0;
+  }
+
+  /* Mobile positioning for tap-visible info bar */
+  .stream-info-bar.tap-visible {
+    top: min(56.25vw, 35vh); /* Match mobile video height */
+  }
+
+  /* Larger touch targets on mobile */
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  input[type="text"] {
+    height: 44px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* Channel list full width */
+  .channel-item {
+    padding: var(--spacing-md);
+  }
+
+  .channel-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Emote picker taller on mobile */
+  .emote-picker {
+    height: 55vh;
+    max-height: none;
+  }
+
+  .emote-grid {
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  }
+
+  /* Chat adjustments */
+  .chat-emote {
+    height: 24px;
+  }
+}
+
+/* Landscape mode - video left, chat right */
+@media (max-height: 500px) and (orientation: landscape) {
+  .stream-container {
+    flex-direction: row;
+  }
+
+  .video-section {
+    position: relative; /* Override fixed positioning for flex layout */
+    top: auto;
+    left: auto;
+    right: auto;
+    flex: 0 0 60%;
+    height: 100%;
+    max-height: none;
+  }
+
+  .stream-info-bar {
+    display: none !important; /* Hide in landscape to save space */
+  }
+
+  .chat-section {
+    flex: 0 0 40%;
+    height: 100%;
+    margin-top: 0; /* Remove margin since video is no longer fixed */
+  }
+
+  /* Hide chat input in landscape - read-only mode */
+  .chat-input-area,
+  .login-prompt {
+    display: none !important;
+  }
+
+  /* Show landscape chat bar with read-only notice */
+  .landscape-chat-bar {
+    display: flex !important;
+  }
+
+  /* When chat hidden: video full width, chat gone */
+  body.chat-hidden .video-section {
+    flex: 0 0 100%;
+  }
+  body.chat-hidden .chat-section {
+    display: none;
+  }
+
+  /* Show "open chat" button on video when chat is hidden - lower right corner */
+  body.chat-hidden .chat-toggle-closed {
+    display: flex;
+    position: absolute;
+    bottom: var(--spacing-sm);
+    right: var(--spacing-sm);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    border-radius: var(--border-radius);
+  }
+
+  /* Smaller chat in landscape */
+  .chat-msg {
+    font-size: var(--font-size-sm);
+    padding: 2px 0;
+  }
+
+  .chat-emote {
+    height: 20px;
+  }
+
+  .chat-input-area {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .chat-input-area input {
+    height: 36px;
+  }
+
+  /* Jump to bottom button in landscape - adjust for smaller input area */
+  .jump-to-bottom {
+    bottom: 45px; /* Smaller than portrait's 60px to account for compact input */
+  }
+
+  /* Emote picker in landscape - slide up from bottom, above input area, only over chat */
+  .emote-picker {
+    position: fixed;
+    bottom: 50px; /* Position above chat input area */
+    left: 60%; /* Start where video ends (video is 60% width) */
+    right: 0;
+    width: 40%; /* Match chat section width */
+    height: calc(100% - 50px); /* Fill chat area above input */
+    max-height: none;
+    border-radius: 0;
+    border-top-left-radius: var(--border-radius-lg);
+  }
+
+  /* Emote autocomplete in landscape - constrain to chat section only */
+  .emote-autocomplete {
+    left: 60% !important; /* Start where video ends (video is 60% width) */
+    right: 0 !important;
+    width: 40% !important; /* Match chat section width explicitly */
+  }
+
+  .emote-grid {
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  }
+}
+
+/* Tablet and larger */
+@media (min-width: 769px) {
+  .stream-container {
+    flex-direction: row;
+  }
+
+  .video-section {
+    flex: 1;
+    height: 100%;
+    max-height: none;
+  }
+
+  .chat-section {
+    flex: 0 0 340px;
+    height: 100%;
+    border-left: 1px solid var(--border-color);
+  }
+
+  /* Login screen wider */
+  .login-container {
+    max-width: 400px;
+  }
+
+  /* Channel picker */
+  .channel-header,
+  .channel-search,
+  .channel-section {
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .channel-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-sm);
+  }
+
+  /* Emote picker as sidebar on tablet+ */
+  .emote-picker {
+    width: 340px;
+    height: 100%;
+    max-height: none;
+    right: 0;
+    left: auto;
+    border-radius: 0;
+    transform: translateX(100%);
+  }
+
+  .emote-picker.open {
+    transform: translateX(0);
+  }
+}
+
+/* Desktop large */
+@media (min-width: 1200px) {
+  .chat-section {
+    flex: 0 0 400px;
+  }
+
+  .emote-picker {
+    width: 400px;
+  }
+}
+
+/* Safe area handling for notched phones */
+@supports (padding: env(safe-area-inset-top)) {
+  .channel-header {
+    padding-top: calc(var(--spacing-md) + var(--safe-area-top));
+  }
+
+  .back-btn,
+  .settings-btn-video,
+  .pip-btn,
+  .sleep-timer-btn {
+    top: calc(var(--spacing-sm) + var(--safe-area-top));
+  }
+
+  /* Only apply safe-area padding when there's actually a safe area (notched phones) */
+  .login-prompt {
+    padding-bottom: max(var(--spacing-sm), var(--safe-area-bottom));
+  }
+
+  .emote-picker {
+    padding-bottom: var(--safe-area-bottom);
+  }
+}
+
+/* Keyboard visible - reduce emote picker height */
+@media (max-height: 400px) {
+  .emote-picker {
+    height: 40vh;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .channel-search {
+    flex-direction: column;
+  }
+
+  .channel-search .btn {
+    width: 100%;
+  }
+
+  .chat-input-area {
+    flex-wrap: wrap;
+  }
+
+  .chat-input-area input {
+    order: 1;
+    width: 100%;
+    flex: none;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .emote-btn {
+    order: 2;
+  }
+
+  .chat-send-btn {
+    order: 3;
+    flex: 1;
+  }
+}
+
+/* Touch-friendly hover states - disable on touch devices */
+@media (hover: none) {
+  .btn:hover {
+    background: inherit;
+  }
+
+  .btn-primary:hover {
+    background: var(--twitch-purple);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .channel-item:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .emote-item:hover {
+    background: var(--bg-tertiary);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .emote-picker,
+  .btn,
+  .channel-item,
+  .emote-item {
+    transition: none;
+  }
+}
+
+/* iOS PWA (standalone) specific fixes */
+@media (display-mode: standalone) {
+  /* Ensure full viewport coverage in iOS PWA */
+  html, body, #app {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  /* Force chat section to fill available space without gaps */
+  .chat-section {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  /* Ensure chat input area sits at true bottom */
+  .chat-input-area {
+    /* Use a minimum padding that works even when safe-area is 0 */
+    padding-bottom: max(var(--spacing-sm), env(safe-area-inset-bottom, 8px));
+  }
+
+  /* Text effects picker - ensure it's scrollable and fills properly */
+  .text-effects-picker {
+    max-height: 55vh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Emote picker safe area handling in PWA */
+  .emote-picker {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

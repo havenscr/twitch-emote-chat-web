@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0e0e10">
+  <title>B.I.T.C.H. - Better Integrated Twitch Chat Hub</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icons/twitch.png">
+  <link rel="stylesheet" href="styles/variables.css?v=1.0.37">
+  <link rel="stylesheet" href="styles/base.css?v=1.0.37">
+  <link rel="stylesheet" href="styles/mobile.css?v=1.0.37">
+</head>
+<body>
+  <div id="app">
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+      <div class="login-container">
+        <div class="login-logo">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+          </svg>
+          <h1>B.I.T.C.H.</h1>
+          <p>Better Integrated Twitch Chat Hub</p>
+        </div>
+        <button id="login-btn" class="btn btn-primary btn-large">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+          </svg>
+          Login with Twitch
+        </button>
+        <button id="anonymous-btn" class="btn btn-secondary">
+          Continue without login
+        </button>
+        <p class="login-note">Login to chat, see followed channels, and access your emotes</p>
+      </div>
+    </div>
+
+    <!-- Channel Picker Screen -->
+    <div id="channel-screen" class="screen" style="display: none;">
+      <div class="app-title">
+        <h1>B.I.T.C.H.</h1>
+        <p>Better Integrated Twitch Chat Hub</p>
+      </div>
+      <div class="channel-header">
+        <h2>Select Channel</h2>
+        <div class="header-buttons">
+          <button id="help-btn" class="btn-icon" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <path d="M12 17h.01"/>
+            </svg>
+          </button>
+          <button id="user-menu-btn" class="btn-icon" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="channel-search">
+        <input type="text" id="channel-input" placeholder="Enter channel name..." autocomplete="off" autocapitalize="none">
+        <button id="channel-go-btn" class="btn btn-primary">Go</button>
+      </div>
+
+      <div id="followed-section" class="channel-section" style="display: none;">
+        <h3>Live Now</h3>
+        <div id="live-channels" class="channel-list"></div>
+      </div>
+
+      <div id="followed-offline-section" class="channel-section" style="display: none;">
+        <h3>Followed</h3>
+        <div id="followed-channels" class="channel-list"></div>
+      </div>
+
+      <div class="channel-section">
+        <h3>Recent</h3>
+        <div id="recent-channels" class="channel-list"></div>
+      </div>
+    </div>
+
+    <!-- Stream Screen (Video + Chat) -->
+    <div id="stream-screen" class="screen" style="display: none;">
+      <div class="stream-container">
+        <!-- Video Section -->
+        <div id="video-section" class="video-section">
+          <div id="twitch-embed"></div>
+          <video id="hls-video" class="hls-video" playsinline webkit-playsinline controls></video>
+          <div id="video-offline" class="video-offline" style="display: none;">
+            <div class="offline-content">
+              <span id="offline-avatar" class="offline-avatar">?</span>
+              <span id="offline-channel" class="offline-channel">Channel</span>
+              <span class="offline-status">Offline</span>
+            </div>
+          </div>
+          <button id="back-btn" class="btn-icon back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <button id="settings-btn-video" class="btn-icon settings-btn-video" title="Settings">
+            <img src="assets/icons/settings.svg" alt="Settings" width="24" height="24">
+          </button>
+          <button id="pip-btn" class="btn-icon pip-btn" title="Picture-in-Picture (P)">
+            <img src="assets/icons/picture-in-picture-2.svg" alt="PiP" width="24" height="24">
+          </button>
+          <button id="sleep-timer-btn" class="btn-icon sleep-timer-btn" title="Sleep Timer">
+            <img src="assets/icons/timer.svg" alt="Timer" width="24" height="24">
+            <span id="sleep-timer-badge" class="sleep-timer-badge"></span>
+          </button>
+          <button id="open-twitch-btn" class="btn-icon open-twitch-btn" title="Open in Twitch">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+            </svg>
+          </button>
+          <button id="chat-toggle-closed" class="btn-icon chat-toggle-closed" title="Show chat">
+            <img src="assets/icons/arrow-left.svg" alt="Show chat" width="20" height="20">
+          </button>
+        </div>
+
+        <!-- Stream Info Bar -->
+        <div id="stream-info-bar" class="stream-info-bar">
+          <span id="stream-title" class="stream-title">Loading...</span>
+          <div class="stream-meta">
+            <span id="stream-game" class="stream-game"></span>
+            <span id="stream-viewers" class="stream-viewers"></span>
+          </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chat-section" class="chat-section">
+          <div id="chat-messages" class="chat-messages"></div>
+          <button id="jump-to-bottom" class="jump-to-bottom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            Jump to bottom
+          </button>
+
+          <!-- Landscape mode: read-only notice with hide button -->
+          <div class="landscape-chat-bar">
+            <button id="chat-toggle-open" class="btn-icon" title="Hide chat">
+              <img src="assets/icons/minimize-2.svg" alt="Hide chat" width="20" height="20">
+            </button>
+            <span class="landscape-readonly-text">Rotate to portrait to chat</span>
+          </div>
+
+          <div id="chat-input-area" class="chat-input-area">
+            <!-- Emote Autocomplete - inside input area for z-index stacking -->
+            <div id="emote-autocomplete" class="emote-autocomplete"></div>
+            <!-- Text Effects Preview - shows transformed text above input -->
+            <div id="text-effects-preview" class="text-effects-preview"></div>
+            <button id="emote-picker-btn" class="btn-icon emote-btn">
+              <img src="assets/icons/smile.svg" alt="Emotes" class="emote-btn-icon">
+            </button>
+            <button id="text-effects-btn" class="btn-icon effects-btn" title="Text Effects">
+              <span class="effects-btn-icon">Aa</span>
+            </button>
+            <input type="text" id="chat-input" placeholder="Send a message" autocomplete="off">
+            <button id="chat-send-btn" class="btn btn-primary">Send</button>
+          </div>
+
+          <div id="login-prompt" class="login-prompt" style="display: none;">
+            <p>Login to chat</p>
+            <button id="chat-login-btn" class="btn btn-primary btn-small">Login</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emote Picker -->
+      <div id="emote-picker" class="emote-picker">
+        <div class="emote-picker-header">
+          <input type="text" id="emote-search" placeholder="Search emotes...">
+          <button id="emote-picker-close" class="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="emote-picker-tabs">
+          <button class="emote-tab active" data-provider="all">All</button>
+          <button class="emote-tab" data-provider="twitch">Twitch</button>
+          <button class="emote-tab" data-provider="ffz">FFZ</button>
+          <button class="emote-tab" data-provider="7tv">7TV</button>
+          <button class="emote-tab" data-provider="bttv">BTTV</button>
+        </div>
+        <div id="emote-grid" class="emote-grid"></div>
+      </div>
+
+      <!-- Text Effects Picker -->
+      <div id="text-effects-picker" class="text-effects-picker">
+        <div class="text-effects-header">
+          <span>Text Effects</span>
+          <button id="text-effects-close" class="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div id="text-effects-grid" class="text-effects-grid">
+          <!-- Effect buttons populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- User Menu (Settings) -->
+    <div id="user-menu" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Settings</h3>
+        <div id="user-info" class="user-info"></div>
+        <button id="refresh-page-btn" class="btn settings-btn-standalone">
+          <img src="assets/icons/rotate-ccw.svg" alt="Refresh" width="18" height="18">
+          Refresh Page
+        </button>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Native Video Player</span>
+            <div id="hls-toggle" class="toggle-switch"></div>
+          </div>
+          <p class="settings-hint">Use direct HLS stream with native controls and Picture-in-Picture support. Required for PiP on mobile.</p>
+        </div>
+        <div id="ios-pwa-notice" class="settings-section settings-notice" style="display: none;">
+          <p class="settings-hint settings-hint-info">
+            <strong>Background audio on iOS:</strong> For the best experience with background audio on iPhone/iPad, use Safari instead of the installed app. Apple restricts background audio in home screen apps.
+          </p>
+        </div>
+        <div class="settings-section settings-section-collapsible" id="adfree-section">
+          <div class="settings-toggle settings-toggle-header" id="adfree-toggle-header">
+            <span class="settings-toggle-label">Ad-Free Video (Turbo/Sub)</span>
+            <span class="settings-chevron">&#9662;</span>
+          </div>
+          <div class="settings-collapsible-content" id="adfree-content" style="display: none;">
+            <p class="settings-hint">If you have Twitch Turbo or a channel subscription, you can enable ad-free video playback in the native player by providing your browser auth token.</p>
+            <div class="settings-token-status" id="adfree-status">
+              <span class="status-dot status-dot-inactive"></span>
+              <span>Not configured</span>
+            </div>
+            <div class="settings-token-input-group">
+              <input type="password" id="gql-auth-token-input" class="settings-input" placeholder="Paste auth token here...">
+              <button id="gql-auth-token-save" class="btn btn-small">Save</button>
+              <button id="gql-auth-token-clear" class="btn btn-small btn-secondary">Clear</button>
+            </div>
+            <p class="settings-hint settings-hint-small">
+              <a href="#" id="adfree-help-link" class="settings-link">How to get your auth token</a> (requires desktop browser)
+            </p>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Smart Keyboard Layout</span>
+            <div id="keyboard-handling-toggle" class="toggle-switch active"></div>
+          </div>
+          <p class="settings-hint">Keeps chat and video visible when keyboard opens. Turn off for default browser behavior if this causes issues on your device.</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Emote Autocomplete</span>
+            <div id="autocomplete-toggle" class="toggle-switch active"></div>
+          </div>
+          <p class="settings-hint">Show emote suggestions as you type in chat</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">@Mention Autocomplete</span>
+            <div id="mention-autocomplete-toggle" class="toggle-switch active"></div>
+          </div>
+          <p class="settings-hint">Show username suggestions when typing @</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Theme</span>
+            <select id="theme-select" class="settings-select">
+              <option value="auto">Auto</option>
+              <option value="default">Default</option>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+          <p class="settings-hint">Auto follows your system preference</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Stream Info</span>
+            <select id="stream-info-select" class="settings-select">
+              <option value="off">Off</option>
+              <option value="tap" selected>Tap to reveal</option>
+              <option value="always">Always show</option>
+            </select>
+          </div>
+          <p class="settings-hint">Show stream title, game, and viewer count</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Sleep Timer</span>
+            <select id="sleep-timer-select" class="settings-select">
+              <option value="0">Off</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">60 minutes</option>
+              <option value="90">90 minutes</option>
+            </select>
+          </div>
+          <p class="settings-hint">Auto-pause stream after selected time</p>
+          <div id="sleep-timer-display" class="sleep-timer-display" style="display: none;"></div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Chat Font Size</span>
+            <select id="font-size-select" class="settings-select">
+              <option value="small">Small</option>
+              <option value="medium" selected>Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+          <p class="settings-hint">Adjust chat message text size</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Mention Sounds</span>
+            <div id="mention-sounds-toggle" class="toggle-switch active"></div>
+          </div>
+          <p class="settings-hint">Play sound when someone @mentions you</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Hide Bots</span>
+            <div id="hide-bots-toggle" class="toggle-switch"></div>
+          </div>
+          <p class="settings-hint">Hide messages from known bots</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Hide Commands</span>
+            <div id="hide-commands-toggle" class="toggle-switch"></div>
+          </div>
+          <p class="settings-hint">Hide messages starting with !</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Hide Announcements</span>
+            <div id="hide-announcements-toggle" class="toggle-switch"></div>
+          </div>
+          <p class="settings-hint">Hide sub, raid, and gift notifications</p>
+        </div>
+        <div class="settings-section">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Fade Chat History</span>
+            <div id="fade-history-toggle" class="toggle-switch active"></div>
+          </div>
+          <p class="settings-hint">Dim older messages loaded before joining</p>
+        </div>
+        <div class="settings-section">
+          <label class="settings-toggle-label" for="blocked-users-input">Blocked Users</label>
+          <input type="text" id="blocked-users-input" class="settings-input" placeholder="user1, user2, user3">
+          <p class="settings-hint">Comma-separated list of usernames to hide</p>
+        </div>
+        <div class="settings-section settings-section-debug">
+          <div class="settings-toggle">
+            <span class="settings-toggle-label">Debug Mode</span>
+            <div id="debug-toggle" class="toggle-switch"></div>
+          </div>
+          <p class="settings-hint">Collect diagnostic logs to help troubleshoot issues</p>
+          <div id="debug-controls" class="debug-controls" style="display: none;">
+            <div class="debug-info">
+              <span id="debug-log-count">0 entries</span>
+              <span id="debug-log-size">0 KB</span>
+            </div>
+            <div class="debug-buttons">
+              <button id="debug-copy-btn" class="btn btn-small btn-secondary">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy Logs
+              </button>
+              <button id="debug-clear-btn" class="btn btn-small btn-secondary">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn btn-danger">Logout</button>
+        <button id="menu-close-btn" class="btn btn-secondary">Close</button>
+        <p class="settings-footer">Made with <span style="color: #e91916;">&#9829;</span> by a Twitch fan<br><span id="app-version" style="opacity: 0.5;"></span></p>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal" style="display: none;">
+      <div class="modal-content help-content">
+        <h3>How to Use</h3>
+
+        <div class="help-section">
+          <h4>Getting Started</h4>
+          <p>Login with your Twitch account to chat, see your followed channels, and use your subscribed emotes. You can also browse without logging in.</p>
+        </div>
+
+        <div class="help-section">
+          <h4>Features</h4>
+          <ul>
+            <li><strong>Third-Party Emotes</strong> - FFZ, 7TV, and BTTV emotes are fully supported</li>
+            <li><strong>Emote Picker</strong> - Tap the smiley icon to browse and search emotes</li>
+            <li><strong>Autocomplete</strong> - Type part of an emote name to see suggestions</li>
+            <li><strong>@Mentions</strong> - Tap a username in chat to reply to them</li>
+            <li><strong>Ad-Free Video</strong> - Enable in Settings if you have Twitch Turbo</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>Tips</h4>
+          <ul>
+            <li>Install this app to your home screen for the best experience</li>
+            <li>Type <strong>@</strong> to autocomplete usernames from chat</li>
+            <li>Swipe through emote tabs to filter by provider</li>
+            <li><strong>Picture-in-Picture</strong> - Press <strong>P</strong> or tap the PiP button on the video for floating video</li>
+            <li>Use <strong>Dark theme</strong> in settings for a darker look</li>
+            <li>Set a <strong>Sleep Timer</strong> to auto-pause the stream</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h4>Browser vs Installed App</h4>
+          <p><strong>In a regular browser:</strong> If you're logged into Twitch in another tab, the video player will recognize your account. This means no ads if you have Twitch Turbo or are subscribed to the channel.</p>
+          <p><strong>As an installed app:</strong> When you add this to your home screen, it runs in its own window separate from your browser. It can't see your Twitch login from other browser tabs, so the video player won't know you're a subscriber. You'll see ads, but you get a cleaner, app-like experience.</p>
+          <p style="margin-top: 8px; opacity: 0.7;"><em>TL;DR: Browser = no ads (if subscribed). Installed app = ads, but nicer interface.</em></p>
+        </div>
+
+        <button id="help-close-btn" class="btn btn-secondary">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HLS.js for non-Safari browsers -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <script src="scripts/debug-logger.js?v=1.0.37"></script>
+  <script src="scripts/twitch-api.js?v=1.0.37"></script>
+  <script src="scripts/emote-loader.js?v=1.0.37"></script>
+  <script src="scripts/twitch-irc.js?v=1.0.37"></script>
+  <script src="scripts/hls-player.js?v=1.0.37"></script>
+  <script src="scripts/media-session.js?v=1.0.37"></script>
+  <script src="scripts/text-effects.js?v=1.0.37"></script>
+  <script src="scripts/app.js?v=1.0.37"></script>
+</body>
+</html>

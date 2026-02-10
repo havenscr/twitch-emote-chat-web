@@ -1,0 +1,95 @@
+/* Twitch Chat Web App - CSS Variables */
+:root {
+  /* Twitch brand colors */
+  --twitch-purple: #9147ff;
+  --twitch-purple-hover: #772ce8;
+  --twitch-purple-light: #bf94ff;
+
+  /* Background colors */
+  --bg-primary: #0e0e10;
+  --bg-secondary: #18181b;
+  --bg-tertiary: #1f1f23;
+  --bg-hover: #26262c;
+  --bg-active: #323239;
+
+  /* Text colors */
+  --text-primary: #efeff1;
+  --text-secondary: #adadb8;
+  --text-muted: #848494;
+  --text-link: #bf94ff;
+
+  /* Status colors */
+  --live-red: #eb0400;
+  --success-green: #00c853;
+  --warning-yellow: #ffb800;
+  --error-red: #f44336;
+
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+
+  /* Safe areas for mobile */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+
+  /* Layout */
+  --header-height: 56px;
+  --input-height: 44px;
+  --chat-input-height: 60px;
+
+  /* Keyboard (set dynamically by JS) */
+  --keyboard-height: 0px;
+}
+
+/* Dark Theme - Pure black for OLED battery savings */
+:root[data-theme="dark"] {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #111111;
+  --bg-hover: #1a1a1a;
+  --bg-active: #222222;
+}
+
+/* Light Theme */
+:root[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f8;
+  --bg-tertiary: #efeff1;
+  --bg-hover: #e6e6ea;
+  --bg-active: #dedee3;
+
+  --text-primary: #0e0e10;
+  --text-secondary: #53535f;
+  --text-muted: #868696;
+  --text-link: #772ce8;
+
+  --border-color: rgba(0, 0, 0, 0.1);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2);
+}

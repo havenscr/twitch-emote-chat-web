@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging in...</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #efeff1;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 300px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #18181b;
+      border-top-color: #9147ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    h1 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #adadb8;
+      font-size: 14px;
+    }
+    .error {
+      color: #f44336;
+    }
+    .error-details {
+      margin-top: 16px;
+      padding: 12px;
+      background: #18181b;
+      border-radius: 8px;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #9147ff;
+      text-decoration: none;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+      <h1>Logging in...</h1>
+      <p>Please wait while we complete authentication</p>
+    </div>
+    <div id="error" style="display: none;">
+      <h1 class="error">Login Failed</h1>
+      <p id="error-message">An error occurred during login.</p>
+      <div id="error-details" class="error-details" style="display: none;"></div>
+      <a href="/website_content/pages/twitch-emote-chat-web/" class="back-link">Back to app</a>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const loadingEl = document.getElementById('loading');
+      const errorEl = document.getElementById('error');
+      const errorMessageEl = document.getElementById('error-message');
+      const errorDetailsEl = document.getElementById('error-details');
+
+      function showError(message, details) {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorMessageEl.textContent = message;
+        if (details) {
+          errorDetailsEl.textContent = details;
+          errorDetailsEl.style.display = 'block';
+        }
+      }
+
+      // Parse hash fragment
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+
+      // Check for error
+      const error = params.get('error');
+      if (error) {
+        const errorDesc = params.get('error_description') || 'Unknown error';
+        showError('Authentication denied', errorDesc.replace(/\+/g, ' '));
+        return;
+      }
+
+      // Get access token
+      const accessToken = params.get('access_token');
+      if (!accessToken) {
+        showError('No access token received', 'The authentication response did not contain an access token.');
+        return;
+      }
+
+      // Store token (use same keys as twitch-api.js)
+      try {
+        localStorage.setItem('twitch-access-token', accessToken);
+        localStorage.setItem('twitch-logged-in', 'true');
+
+        // Get token type and scope if available
+        const tokenType = params.get('token_type');
+        const scope = params.get('scope');
+
+        if (scope) {
+          localStorage.setItem('twitch-scopes', scope);
+        }
+
+        // Redirect to main app
+        window.location.href = '/website_content/pages/twitch-emote-chat-web/';
+      } catch (e) {
+        showError('Failed to save login', 'Could not store authentication data. Please ensure cookies and localStorage are enabled.');
+      }
+    })();
+  </script>
+</body>
+</html>
