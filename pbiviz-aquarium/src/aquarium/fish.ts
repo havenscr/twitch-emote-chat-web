@@ -114,6 +114,12 @@ export class Fish {
 
     /** Update position and animation state */
     update(dt: number, time: number, speedMultiplier: number): void {
+        // Skip movement if we don't have valid bounds yet — just animate fins/tail
+        if (this.boundsW < 10 || this.boundsH < 10) {
+            this.animPhase += dt * 0.005;
+            return;
+        }
+
         const speed = 1.5 * speedMultiplier * (0.5 + this.value2 * 0.5);
 
         // Update retarget timer
@@ -150,9 +156,12 @@ export class Fish {
         this.x += this.vx * dt * 0.12;
         this.y += this.vy * dt * 0.12;
 
-        // Clamp position
-        this.x = clamp(this.x, this.size, this.boundsW - this.size);
-        this.y = clamp(this.y, this.size, maxY);
+        // Clamp position — only if bounds are valid
+        const minClamp = this.size;
+        const maxClampX = Math.max(this.boundsW - this.size, minClamp + 1);
+        const maxClampY = Math.max(maxY, minClamp + 1);
+        this.x = clamp(this.x, minClamp, maxClampX);
+        this.y = clamp(this.y, minClamp, maxClampY);
 
         // Update direction
         if (Math.abs(this.vx) > 0.1) {

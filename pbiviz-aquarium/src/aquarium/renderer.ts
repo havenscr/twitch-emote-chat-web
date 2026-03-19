@@ -10,9 +10,9 @@ import { Fish, FishData } from "./fish";
 import { THEMES, ThemeColors } from "./utils";
 
 export interface AquariumSettings {
-    theme: string;          // "coralReef" | "deepOcean" | "clearWater"
+    theme: string;
     showBubbles: boolean;
-    animationSpeed: number; // 1..10
+    animationSpeed: number;
     showOutline: boolean;
     showLabels: boolean;
     labelFontSize: number;
@@ -43,6 +43,8 @@ export class AquariumRenderer {
     private running = false;
     private width = 0;
     private height = 0;
+    private needsScatter = false;
+    private sizeInitialized = false;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -52,7 +54,6 @@ export class AquariumRenderer {
         this.seaweed = new Seaweed();
     }
 
-    /** Start the animation loop */
     start(): void {
         if (this.running) return;
         this.running = true;
@@ -61,7 +62,6 @@ export class AquariumRenderer {
         this.loop(this.startTime);
     }
 
-    /** Stop the animation loop */
     stop(): void {
         this.running = false;
         if (this.animFrameId !== null) {
@@ -70,13 +70,10 @@ export class AquariumRenderer {
         }
     }
 
-    /** Update canvas size (call from Power BI update when viewport changes) */
     resize(width: number, height: number): void {
         if (width <= 0 || height <= 0) return;
 
         const dpr = window.devicePixelRatio || 1;
-        const prevWidth = this.width;
-        const prevHeight = this.height;
         this.width = width;
         this.height = height;
         this.canvas.width = width * dpr;
@@ -85,23 +82,22 @@ export class AquariumRenderer {
         this.canvas.style.height = height + "px";
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // Reinitialize particles for new size
         this.bubbles.init(width, height);
         this.seaweed.init();
         this.background.init();
 
-        // Update fish bounds and reposition if they were created with bad bounds
-        const wasBadBounds = prevWidth <= 1 || prevHeight <= 1;
+        // If we have fish but haven't scattered them into valid bounds yet, do it now
+        if (!this.sizeInitialized && this.fish.length > 0) {
+            this.needsScatter = true;
+        }
+        this.sizeInitialized = true;
+
+        // Update fish bounds
         for (const f of this.fish) {
             f.setBounds(width, height);
-            // Scatter fish if they were stuck at 0,0 or outside new bounds
-            if (wasBadBounds || f.x < f.size || f.x > width - f.size || f.y < f.size || f.y > height * 0.82) {
-                f.scatter(width, height);
-            }
         }
     }
 
-    /** Update fish data from Power BI dataView */
     setData(fishData: FishData[]): void {
         const existingMap = new Map<string, Fish>();
         for (const f of this.fish) {
@@ -109,35 +105,45 @@ export class AquariumRenderer {
         }
 
         const newFish: Fish[] = [];
+        let hasNew = false;
         for (const d of fishData) {
             const existing = existingMap.get(d.label);
             if (existing) {
-                // Preserve position, update data
                 existing.updateData(d);
                 newFish.push(existing);
                 existingMap.delete(d.label);
             } else {
-                // New fish
                 newFish.push(new Fish(d, this.width, this.height));
+                hasNew = true;
             }
         }
         this.fish = newFish;
+
+        // If new fish were created and we have valid dimensions, scatter them
+        // If dimensions aren't valid yet, flag for scatter on next frame
+        if (hasNew) {
+            if (this.width > 1 && this.height > 1) {
+                for (const f of this.fish) {
+                    // Only scatter fish that are in bad positions (near origin)
+                    if (f.x < f.size * 3 && f.y < f.size * 3) {
+                        f.scatter(this.width, this.height);
+                    }
+                }
+            } else {
+                this.needsScatter = true;
+            }
+        }
     }
 
-    /** Update rendering settings */
     setSettings(settings: Partial<AquariumSettings>): void {
         const prevTheme = this.settings.theme;
         this.settings = { ...this.settings, ...settings };
-
-        // Re-init background if theme changed
         if (settings.theme && settings.theme !== prevTheme) {
             this.background.init();
         }
     }
 
-    /** Get fish at canvas coordinates (for click/hover) */
     getFishAt(x: number, y: number): Fish | null {
-        // Check in reverse order (top-most fish first)
         for (let i = this.fish.length - 1; i >= 0; i--) {
             if (this.fish[i].hitTest(x, y)) {
                 return this.fish[i];
@@ -146,39 +152,27 @@ export class AquariumRenderer {
         return null;
     }
 
-    /** Clear all hover states */
     clearHover(): void {
-        for (const f of this.fish) {
-            f.hovered = false;
-        }
+        for (const f of this.fish) f.hovered = false;
     }
 
-    /** Set hover state for a specific fish */
     setHover(fish: Fish | null): void {
-        for (const f of this.fish) {
-            f.hovered = f === fish;
-        }
+        for (const f of this.fish) f.hovered = f === fish;
     }
 
-    /** Clear all selection states */
     clearSelection(): void {
-        for (const f of this.fish) {
-            f.selected = false;
-        }
+        for (const f of this.fish) f.selected = false;
     }
 
-    /** Set selection state */
     setSelection(fish: Fish | null): void {
-        for (const f of this.fish) {
-            f.selected = f === fish;
-        }
+        for (const f of this.fish) f.selected = f === fish;
     }
 
     /** Main animation loop */
     private loop = (now: number): void => {
         if (!this.running) return;
 
-        const dt = Math.min(now - this.lastTime, 50); // cap at 50ms to prevent jumps
+        const dt = Math.min(now - this.lastTime, 50);
         this.lastTime = now;
         const time = now - this.startTime;
 
@@ -189,16 +183,39 @@ export class AquariumRenderer {
     };
 
     private update(dt: number, time: number): void {
-        const speedMul = this.settings.animationSpeed / 5;
+        const w = this.width;
+        const h = this.height;
 
-        // Update fish
+        // Self-healing: scatter fish that need repositioning once we have valid dimensions
+        if (this.needsScatter && w > 1 && h > 1 && this.fish.length > 0) {
+            for (const f of this.fish) {
+                f.scatter(w, h);
+            }
+            this.needsScatter = false;
+        }
+
+        // Additional self-healing: detect stuck fish every frame
+        // If canvas has valid size but fish are clustered near origin, scatter them
+        if (w > 100 && h > 100 && this.fish.length > 0) {
+            let stuckCount = 0;
+            for (const f of this.fish) {
+                if (f.x < f.size * 3 && f.y < f.size * 3) stuckCount++;
+            }
+            // If most fish are stuck near origin, scatter all
+            if (stuckCount > this.fish.length * 0.5) {
+                for (const f of this.fish) {
+                    f.scatter(w, h);
+                }
+            }
+        }
+
+        const speedMul = this.settings.animationSpeed / 5;
         for (const f of this.fish) {
             f.update(dt, time, speedMul);
         }
 
-        // Update bubbles
         if (this.settings.showBubbles) {
-            this.bubbles.update(this.width, this.height, dt, time);
+            this.bubbles.update(w, h, dt, time);
         }
     }
 
@@ -212,16 +229,15 @@ export class AquariumRenderer {
         const theme: ThemeColors = THEMES[this.settings.theme] || THEMES.coralReef;
         const hasSelection = this.fish.some(f => f.selected);
 
-        // Clear
         ctx.clearRect(0, 0, w, h);
 
-        // Layer 1: Background (water, rays, caustics, sand, rocks, coral, dust, surface)
+        // Layer 1: Background
         this.background.render(ctx, w, h, time, theme);
 
-        // Layer 2: Seaweed (behind fish)
+        // Layer 2: Seaweed
         this.seaweed.render(ctx, w, h, time);
 
-        // Layer 3: Fish (dim unselected when selection active)
+        // Layer 3: Fish
         for (const f of this.fish) {
             if (hasSelection && !f.selected && !f.hovered) {
                 ctx.save();
@@ -233,7 +249,7 @@ export class AquariumRenderer {
             }
         }
 
-        // Layer 4: Labels (on top of fish)
+        // Layer 4: Labels
         if (this.settings.showLabels) {
             for (const f of this.fish) {
                 if (hasSelection && !f.selected && !f.hovered) {
@@ -247,16 +263,15 @@ export class AquariumRenderer {
             }
         }
 
-        // Layer 5: Bubbles (on top of everything)
+        // Layer 5: Bubbles
         if (this.settings.showBubbles) {
             this.bubbles.render(ctx);
         }
 
-        // Layer 6: Vignette overlay for polished look
+        // Layer 6: Vignette
         this.drawVignette(ctx, w, h);
     }
 
-    /** Subtle darkened corners/edges vignette */
     private drawVignette(ctx: CanvasRenderingContext2D, w: number, h: number): void {
         const cx = w * 0.5;
         const cy = h * 0.5;
@@ -268,7 +283,6 @@ export class AquariumRenderer {
         ctx.fillRect(0, 0, w, h);
     }
 
-    /** Destroy and clean up */
     destroy(): void {
         this.stop();
         this.fish = [];
