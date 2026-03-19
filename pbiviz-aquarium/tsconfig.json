@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "target": "ES2020",
+    "sourceMap": true,
+    "outDir": "./.tmp/build/",
+    "moduleResolution": "node",
+    "declaration": true,
+    "skipLibCheck": true,
+    "lib": ["ES2020", "DOM"]
+  },
+  "files": [
+    "src/visual.ts",
+    "src/settings.ts",
+    "src/aquarium/renderer.ts",
+    "src/aquarium/background.ts",
+    "src/aquarium/fish.ts",
+    "src/aquarium/species.ts",
+    "src/aquarium/bubbles.ts",
+    "src/aquarium/seaweed.ts",
+    "src/aquarium/utils.ts"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "visual": {
+    "name": "AquariumVisual",
+    "displayName": "Aquarium",
+    "guid": "AquariumVisual_B3F7A2E1D4C6489E",
+    "visualClassName": "Visual",
+    "version": "1.0.0.0",
+    "description": "A beautiful aquarium visualization that maps categorical data to swimming fish with size driven by measures",
+    "supportUrl": "https://github.com/havenscr/twitch-emote-chat-web",
+    "gitHubUrl": "https://github.com/havenscr/twitch-emote-chat-web"
+  },
+  "author": {
+    "name": "Aquarium Visual",
+    "email": "aquarium@example.com"
+  },
+  "apiVersion": "5.9.0",
+  "style": "style/visual.less",
+  "capabilities": "capabilities.json",
+  "assets": {
+    "icon": "assets/icon.png"
+  }
+}

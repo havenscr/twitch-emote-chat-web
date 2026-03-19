@@ -1,0 +1,121 @@
+{
+  "dataRoles": [
+    {
+      "name": "category",
+      "kind": "Grouping",
+      "displayName": "Fish (Category)",
+      "displayNameKey": "Role_Category",
+      "description": "Each unique value becomes a fish in the aquarium"
+    },
+    {
+      "name": "measure",
+      "kind": "Measure",
+      "displayName": "Size (Measure)",
+      "displayNameKey": "Role_Measure",
+      "description": "Numeric value that determines the size of each fish"
+    },
+    {
+      "name": "measure2",
+      "kind": "Measure",
+      "displayName": "Speed (Measure)",
+      "displayNameKey": "Role_Measure2",
+      "description": "Optional numeric value that determines the speed of each fish"
+    }
+  ],
+  "dataViewMappings": [
+    {
+      "categorical": {
+        "categories": {
+          "for": {
+            "in": "category"
+          },
+          "dataReductionAlgorithm": {
+            "top": {
+              "count": 100
+            }
+          }
+        },
+        "values": {
+          "select": [
+            {
+              "bind": {
+                "to": "measure"
+              }
+            },
+            {
+              "bind": {
+                "to": "measure2"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "objects": {
+    "aquariumSettings": {
+      "properties": {
+        "theme": {
+          "type": {
+            "enumeration": [
+              { "value": "coralReef", "displayName": "Coral Reef" },
+              { "value": "deepOcean", "displayName": "Deep Ocean" },
+              { "value": "clearWater", "displayName": "Clear Water" }
+            ]
+          }
+        },
+        "showBubbles": {
+          "type": { "bool": true }
+        },
+        "animationSpeed": {
+          "type": { "numeric": true }
+        }
+      }
+    },
+    "fishSettings": {
+      "properties": {
+        "colorPalette": {
+          "type": {
+            "enumeration": [
+              { "value": "tropical", "displayName": "Tropical" },
+              { "value": "ocean", "displayName": "Ocean" },
+              { "value": "warm", "displayName": "Warm" },
+              { "value": "cool", "displayName": "Cool" }
+            ]
+          }
+        },
+        "showOutline": {
+          "type": { "bool": true }
+        },
+        "minFishSize": {
+          "type": { "numeric": true }
+        },
+        "maxFishSize": {
+          "type": { "numeric": true }
+        }
+      }
+    },
+    "labelSettings": {
+      "properties": {
+        "showLabels": {
+          "type": { "bool": true }
+        },
+        "fontSize": {
+          "type": { "numeric": true }
+        },
+        "fontColor": {
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
+    }
+  },
+  "privileges": [],
+  "supportsHighlight": true,
+  "tooltips": {
+    "supportedTypes": {
+      "default": true,
+      "canvas": true
+    },
+    "roles": ["category", "measure", "measure2"]
+  }
+}

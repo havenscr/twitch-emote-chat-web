@@ -1,0 +1,34 @@
+{
+  "name": "aquarium-visual",
+  "version": "1.0.0",
+  "description": "A beautiful aquarium Power BI custom visual that maps data to swimming fish",
+  "main": "src/visual.ts",
+  "scripts": {
+    "pbiviz": "pbiviz",
+    "start": "pbiviz start",
+    "package": "pbiviz package",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "powerbi-visuals-api": "~5.9.0",
+    "powerbi-visuals-utils-dataviewutils": "~6.1.0",
+    "powerbi-visuals-utils-formattingmodel": "~6.2.0",
+    "powerbi-visuals-utils-tooltiputils": "~6.0.4",
+    "powerbi-visuals-utils-interactivityutils": "~6.0.4"
+  },
+  "devDependencies": {
+    "powerbi-visuals-tools": "~5.4.0",
+    "typescript": "~5.3.3",
+    "ts-loader": "~9.5.1",
+    "webpack": "~5.90.0",
+    "webpack-cli": "~5.1.4",
+    "style-loader": "~3.3.4",
+    "css-loader": "~6.9.1",
+    "less": "~4.2.0",
+    "less-loader": "~12.2.0",
+    "mini-css-extract-plugin": "~2.7.7",
+    "@typescript-eslint/eslint-plugin": "~6.21.0",
+    "@typescript-eslint/parser": "~6.21.0",
+    "eslint": "~8.56.0"
+  }
+}
