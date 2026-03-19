@@ -45,6 +45,7 @@ export class AquariumRenderer {
     private height = 0;
     private needsScatter = false;
     private sizeInitialized = false;
+    private lastScatterTime = 0;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -199,22 +200,21 @@ export class AquariumRenderer {
             this.needsScatter = false;
         }
 
-        // Additional self-healing: detect stuck fish every frame
-        // If canvas has valid size but fish are in corners or out of bounds, scatter them
-        if (w > 100 && h > 100 && this.fish.length > 0) {
-            let stuckCount = 0;
+        // Additional self-healing: detect fish with NaN or fully out of bounds
+        // Only scatter once per second max to avoid re-scatter loops
+        const now = performance.now();
+        if (w > 100 && h > 100 && this.fish.length > 0 && now - this.lastScatterTime > 1000) {
+            let badCount = 0;
             for (const f of this.fish) {
-                const inCorner = (f.x < f.size * 2 || f.x > w - f.size * 2) &&
-                                 (f.y < f.size * 2 || f.y > h - f.size * 2);
-                const outOfBounds = f.x <= 0 || f.y <= 0 || f.x >= w || f.y >= h;
                 const hasNaN = isNaN(f.x) || isNaN(f.y);
-                if (inCorner || outOfBounds || hasNaN) stuckCount++;
+                const outOfBounds = f.x <= 0 || f.y <= 0 || f.x >= w || f.y >= h;
+                if (hasNaN || outOfBounds) badCount++;
             }
-            // If most fish are stuck, scatter all
-            if (stuckCount > this.fish.length * 0.5) {
+            if (badCount > this.fish.length * 0.5) {
                 for (const f of this.fish) {
                     f.scatter(w, h);
                 }
+                this.lastScatterTime = now;
             }
         }
 

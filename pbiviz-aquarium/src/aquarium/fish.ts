@@ -144,24 +144,21 @@ export class Fish {
         // Add gentle sine bobbing
         this.vy += Math.sin(time * 0.001 + this.animPhase) * 0.008;
 
-        // Boundary repulsion — stronger near edges to prevent corner-sticking
-        const margin = this.size * 2;
+        // Boundary repulsion — adaptive margin that never exceeds 20% of canvas dimension
+        const marginX = Math.min(this.size * 1.5, this.boundsW * 0.2);
+        const marginY = Math.min(this.size * 1.5, this.boundsH * 0.2);
         const maxY = this.boundsH * 0.80;
-        if (this.x < margin) {
-            const push = 1 - this.x / margin;
-            this.vx += 0.3 * push + 0.1;
+        if (this.x < marginX && marginX > 0) {
+            this.vx += 0.2 * (1 - this.x / marginX);
         }
-        if (this.x > this.boundsW - margin) {
-            const push = 1 - (this.boundsW - this.x) / margin;
-            this.vx -= 0.3 * push + 0.1;
+        if (this.x > this.boundsW - marginX && marginX > 0) {
+            this.vx -= 0.2 * (1 - (this.boundsW - this.x) / marginX);
         }
-        if (this.y < margin) {
-            const push = 1 - this.y / margin;
-            this.vy += 0.25 * push + 0.08;
+        if (this.y < marginY && marginY > 0) {
+            this.vy += 0.15 * (1 - this.y / marginY);
         }
         if (this.y > maxY) {
-            const push = 1 - (this.boundsH - this.y) / (this.boundsH - maxY + 1);
-            this.vy -= 0.3 * push + 0.1;
+            this.vy -= 0.2;
         }
 
         // Apply velocity (dt in ms, scale to ~pixels/frame at 60fps)
@@ -187,10 +184,27 @@ export class Fish {
         this.animPhase += dt * 0.004 * (1 + speed);
     }
 
-    /** Update canvas bounds */
+    /** Update canvas bounds — reposition fish if outside new bounds */
     setBounds(w: number, h: number): void {
+        const oldW = this.boundsW;
+        const oldH = this.boundsH;
         this.boundsW = w;
         this.boundsH = h;
+
+        // If we had no valid bounds before and now we do, scatter to a good position
+        if ((oldW < 10 || oldH < 10) && w > 10 && h > 10) {
+            this.scatter(w, h);
+            return;
+        }
+
+        // If fish is outside the new bounds, reposition
+        if (w > 10 && h > 10 && (this.x < 0 || this.x > w || this.y < 0 || this.y > h * 0.85)) {
+            this.scatter(w, h);
+            return;
+        }
+
+        // Always update target to be within new bounds
+        this.pickNewTarget();
     }
 
     /** Pick a new random target to swim toward */
