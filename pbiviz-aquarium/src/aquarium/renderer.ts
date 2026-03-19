@@ -172,12 +172,17 @@ export class AquariumRenderer {
     private loop = (now: number): void => {
         if (!this.running) return;
 
-        const dt = Math.min(now - this.lastTime, 50);
-        this.lastTime = now;
-        const time = now - this.startTime;
+        try {
+            const dt = Math.min(now - this.lastTime, 50);
+            this.lastTime = now;
+            const time = now - this.startTime;
 
-        this.update(dt, time);
-        this.render(time);
+            this.update(dt, time);
+            this.render(time);
+        } catch (e) {
+            // Swallow rendering errors so the loop never dies
+            console.warn("Aquarium render error:", e);
+        }
 
         this.animFrameId = requestAnimationFrame(this.loop);
     };
@@ -195,13 +200,17 @@ export class AquariumRenderer {
         }
 
         // Additional self-healing: detect stuck fish every frame
-        // If canvas has valid size but fish are clustered near origin, scatter them
+        // If canvas has valid size but fish are in corners or out of bounds, scatter them
         if (w > 100 && h > 100 && this.fish.length > 0) {
             let stuckCount = 0;
             for (const f of this.fish) {
-                if (f.x < f.size * 3 && f.y < f.size * 3) stuckCount++;
+                const inCorner = (f.x < f.size * 2 || f.x > w - f.size * 2) &&
+                                 (f.y < f.size * 2 || f.y > h - f.size * 2);
+                const outOfBounds = f.x <= 0 || f.y <= 0 || f.x >= w || f.y >= h;
+                const hasNaN = isNaN(f.x) || isNaN(f.y);
+                if (inCorner || outOfBounds || hasNaN) stuckCount++;
             }
-            // If most fish are stuck near origin, scatter all
+            // If most fish are stuck, scatter all
             if (stuckCount > this.fish.length * 0.5) {
                 for (const f of this.fish) {
                     f.scatter(w, h);

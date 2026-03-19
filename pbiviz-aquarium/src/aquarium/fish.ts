@@ -144,13 +144,25 @@ export class Fish {
         // Add gentle sine bobbing
         this.vy += Math.sin(time * 0.001 + this.animPhase) * 0.008;
 
-        // Boundary repulsion (soft)
-        const margin = this.size * 1.5;
-        const maxY = this.boundsH * 0.82;
-        if (this.x < margin) this.vx += 0.15;
-        if (this.x > this.boundsW - margin) this.vx -= 0.15;
-        if (this.y < margin) this.vy += 0.1;
-        if (this.y > maxY) this.vy -= 0.15;
+        // Boundary repulsion — stronger near edges to prevent corner-sticking
+        const margin = this.size * 2;
+        const maxY = this.boundsH * 0.80;
+        if (this.x < margin) {
+            const push = 1 - this.x / margin;
+            this.vx += 0.3 * push + 0.1;
+        }
+        if (this.x > this.boundsW - margin) {
+            const push = 1 - (this.boundsW - this.x) / margin;
+            this.vx -= 0.3 * push + 0.1;
+        }
+        if (this.y < margin) {
+            const push = 1 - this.y / margin;
+            this.vy += 0.25 * push + 0.08;
+        }
+        if (this.y > maxY) {
+            const push = 1 - (this.boundsH - this.y) / (this.boundsH - maxY + 1);
+            this.vy -= 0.3 * push + 0.1;
+        }
 
         // Apply velocity (dt in ms, scale to ~pixels/frame at 60fps)
         this.x += this.vx * dt * 0.12;
@@ -184,8 +196,12 @@ export class Fish {
     /** Pick a new random target to swim toward */
     private pickNewTarget(): void {
         const margin = this.size * 2;
-        this.targetX = rand(margin, this.boundsW - margin);
-        this.targetY = rand(margin, this.boundsH * 0.75);
+        const minX = margin;
+        const maxX = Math.max(margin + 1, this.boundsW - margin);
+        const minY = margin;
+        const maxY = Math.max(margin + 1, this.boundsH * 0.72);
+        this.targetX = rand(minX, maxX);
+        this.targetY = rand(minY, maxY);
     }
 
     /** Render this fish */
@@ -237,10 +253,20 @@ export class Fish {
         const rw = maxW + bgPad * 2;
         const rh = fontSize * 2 + bgPad * 2 + 2;
 
-        // Frosted glass background
+        // Frosted glass background (manual rounded rect for browser compat)
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.beginPath();
-        ctx.roundRect(rx, ry, rw, rh, 5);
+        const radius = 5;
+        ctx.moveTo(rx + radius, ry);
+        ctx.lineTo(rx + rw - radius, ry);
+        ctx.arcTo(rx + rw, ry, rx + rw, ry + radius, radius);
+        ctx.lineTo(rx + rw, ry + rh - radius);
+        ctx.arcTo(rx + rw, ry + rh, rx + rw - radius, ry + rh, radius);
+        ctx.lineTo(rx + radius, ry + rh);
+        ctx.arcTo(rx, ry + rh, rx, ry + rh - radius, radius);
+        ctx.lineTo(rx, ry + radius);
+        ctx.arcTo(rx, ry, rx + radius, ry, radius);
+        ctx.closePath();
         ctx.fill();
 
         // Subtle border
