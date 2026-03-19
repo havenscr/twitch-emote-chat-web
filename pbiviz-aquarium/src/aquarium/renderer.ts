@@ -210,25 +210,40 @@ export class AquariumRenderer {
         if (w === 0 || h === 0) return;
 
         const theme: ThemeColors = THEMES[this.settings.theme] || THEMES.coralReef;
+        const hasSelection = this.fish.some(f => f.selected);
 
         // Clear
         ctx.clearRect(0, 0, w, h);
 
-        // Layer 1: Background (water, rays, caustics, sand, rocks, coral)
+        // Layer 1: Background (water, rays, caustics, sand, rocks, coral, dust, surface)
         this.background.render(ctx, w, h, time, theme);
 
         // Layer 2: Seaweed (behind fish)
         this.seaweed.render(ctx, w, h, time);
 
-        // Layer 3: Fish
+        // Layer 3: Fish (dim unselected when selection active)
         for (const f of this.fish) {
-            f.render(ctx, this.settings.showOutline);
+            if (hasSelection && !f.selected && !f.hovered) {
+                ctx.save();
+                ctx.globalAlpha = 0.35;
+                f.render(ctx, this.settings.showOutline);
+                ctx.restore();
+            } else {
+                f.render(ctx, this.settings.showOutline);
+            }
         }
 
         // Layer 4: Labels (on top of fish)
         if (this.settings.showLabels) {
             for (const f of this.fish) {
-                f.renderLabel(ctx, this.settings.labelFontSize, this.settings.labelFontColor);
+                if (hasSelection && !f.selected && !f.hovered) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.3;
+                    f.renderLabel(ctx, this.settings.labelFontSize, this.settings.labelFontColor);
+                    ctx.restore();
+                } else {
+                    f.renderLabel(ctx, this.settings.labelFontSize, this.settings.labelFontColor);
+                }
             }
         }
 
@@ -236,6 +251,21 @@ export class AquariumRenderer {
         if (this.settings.showBubbles) {
             this.bubbles.render(ctx);
         }
+
+        // Layer 6: Vignette overlay for polished look
+        this.drawVignette(ctx, w, h);
+    }
+
+    /** Subtle darkened corners/edges vignette */
+    private drawVignette(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+        const cx = w * 0.5;
+        const cy = h * 0.5;
+        const r = Math.max(w, h) * 0.7;
+        const grad = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r);
+        grad.addColorStop(0, "rgba(0,0,0,0)");
+        grad.addColorStop(1, "rgba(0,0,0,0.25)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
     }
 
     /** Destroy and clean up */

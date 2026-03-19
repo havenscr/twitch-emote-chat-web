@@ -208,35 +208,49 @@ export class Fish {
     /** Render label above/below the fish */
     renderLabel(ctx: CanvasRenderingContext2D, fontSize: number, fontColor: string): void {
         ctx.save();
-        ctx.font = `${fontSize}px 'Segoe UI', Arial, sans-serif`;
+        ctx.font = `600 ${fontSize}px 'Segoe UI', Arial, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
 
         const text = this.label;
         const valueText = this.formatValue(this.value);
-        const labelY = this.y - this.size * 0.5 - 6;
+        const labelY = this.y - this.size * 0.5 - 8;
 
-        // Background for readability
+        // Measure for background
         const metrics = ctx.measureText(text);
+        ctx.font = `${fontSize - 1}px 'Segoe UI', Arial, sans-serif`;
         const valueMetrics = ctx.measureText(valueText);
         const maxW = Math.max(metrics.width, valueMetrics.width);
-        const bgPad = 3;
+        const bgPad = 5;
 
-        ctx.fillStyle = "rgba(0,0,0,0.45)";
-        ctx.beginPath();
         const rx = this.x - maxW / 2 - bgPad;
         const ry = labelY - fontSize * 2 - bgPad;
         const rw = maxW + bgPad * 2;
-        const rh = fontSize * 2 + bgPad * 2;
-        ctx.roundRect(rx, ry, rw, rh, 3);
+        const rh = fontSize * 2 + bgPad * 2 + 2;
+
+        // Frosted glass background
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, rw, rh, 5);
         ctx.fill();
 
-        // Category name
+        // Subtle border
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+
+        // Category name with text shadow
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetY = 1;
+        ctx.font = `600 ${fontSize}px 'Segoe UI', Arial, sans-serif`;
         ctx.fillStyle = fontColor;
-        ctx.fillText(text, this.x, labelY - fontSize);
+        ctx.fillText(text, this.x, labelY - fontSize + 1);
 
         // Value
-        ctx.globalAlpha = 0.8;
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.globalAlpha = 0.75;
         ctx.font = `${fontSize - 1}px 'Segoe UI', Arial, sans-serif`;
         ctx.fillText(valueText, this.x, labelY);
 
