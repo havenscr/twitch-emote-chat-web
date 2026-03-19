@@ -72,7 +72,11 @@ export class AquariumRenderer {
 
     /** Update canvas size (call from Power BI update when viewport changes) */
     resize(width: number, height: number): void {
+        if (width <= 0 || height <= 0) return;
+
         const dpr = window.devicePixelRatio || 1;
+        const prevWidth = this.width;
+        const prevHeight = this.height;
         this.width = width;
         this.height = height;
         this.canvas.width = width * dpr;
@@ -86,9 +90,14 @@ export class AquariumRenderer {
         this.seaweed.init();
         this.background.init();
 
-        // Update fish bounds
+        // Update fish bounds and reposition if they were created with bad bounds
+        const wasBadBounds = prevWidth <= 1 || prevHeight <= 1;
         for (const f of this.fish) {
             f.setBounds(width, height);
+            // Scatter fish if they were stuck at 0,0 or outside new bounds
+            if (wasBadBounds || f.x < f.size || f.x > width - f.size || f.y < f.size || f.y > height * 0.82) {
+                f.scatter(width, height);
+            }
         }
     }
 

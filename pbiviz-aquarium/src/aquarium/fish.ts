@@ -65,18 +65,20 @@ export class Fish {
 
         // Random initial position (avoid edges and sand)
         const margin = data.size;
-        this.x = rand(margin, boundsW - margin);
-        this.y = rand(margin, boundsH * 0.8 - margin);
+        const safeW = Math.max(boundsW, margin * 4);
+        const safeH = Math.max(boundsH, margin * 4);
+        this.x = rand(margin, safeW - margin);
+        this.y = rand(margin, safeH * 0.75);
 
         // Random initial velocity
-        this.vx = rand(-1, 1);
-        this.vy = rand(-0.3, 0.3);
+        this.vx = rand(-1.5, 1.5);
+        this.vy = rand(-0.5, 0.5);
         this.direction = this.vx >= 0 ? 1 : -1;
         this.scaleX = this.direction;
 
         // Pick initial target
-        this.targetX = rand(margin, boundsW - margin);
-        this.targetY = rand(margin, boundsH * 0.75 - margin);
+        this.targetX = rand(margin, safeW - margin);
+        this.targetY = rand(margin, safeH * 0.75);
         this.retargetTimer = rand(2000, 6000);
 
         this.animPhase = rand(0, Math.PI * 2);
@@ -95,15 +97,30 @@ export class Fish {
         this.selectionId = data.selectionId;
     }
 
+    /** Reposition fish randomly within given bounds (used after resize from bad state) */
+    scatter(boundsW: number, boundsH: number): void {
+        this.boundsW = boundsW;
+        this.boundsH = boundsH;
+        const margin = this.size * 2;
+        this.x = rand(margin, Math.max(margin + 1, boundsW - margin));
+        this.y = rand(margin, Math.max(margin + 1, boundsH * 0.75));
+        this.targetX = rand(margin, Math.max(margin + 1, boundsW - margin));
+        this.targetY = rand(margin, Math.max(margin + 1, boundsH * 0.75));
+        this.vx = rand(-1.5, 1.5);
+        this.vy = rand(-0.5, 0.5);
+        this.direction = this.vx >= 0 ? 1 : -1;
+        this.scaleX = this.direction;
+    }
+
     /** Update position and animation state */
     update(dt: number, time: number, speedMultiplier: number): void {
-        const speed = 0.5 * speedMultiplier * (0.5 + this.value2 * 0.5);
+        const speed = 1.5 * speedMultiplier * (0.5 + this.value2 * 0.5);
 
         // Update retarget timer
         this.retargetTimer -= dt;
         if (this.retargetTimer <= 0) {
             this.pickNewTarget();
-            this.retargetTimer = rand(3000, 8000);
+            this.retargetTimer = rand(2000, 5000);
         }
 
         // Steer toward target
@@ -112,26 +129,26 @@ export class Fish {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 5) {
-            this.vx = lerp(this.vx, (dx / dist) * speed, 0.02);
-            this.vy = lerp(this.vy, (dy / dist) * speed, 0.02);
+            this.vx = lerp(this.vx, (dx / dist) * speed, 0.05);
+            this.vy = lerp(this.vy, (dy / dist) * speed, 0.05);
         } else {
             this.pickNewTarget();
         }
 
         // Add gentle sine bobbing
-        this.vy += Math.sin(time * 0.001 + this.animPhase) * 0.005;
+        this.vy += Math.sin(time * 0.001 + this.animPhase) * 0.008;
 
         // Boundary repulsion (soft)
         const margin = this.size * 1.5;
         const maxY = this.boundsH * 0.82;
-        if (this.x < margin) this.vx += 0.05;
-        if (this.x > this.boundsW - margin) this.vx -= 0.05;
-        if (this.y < margin) this.vy += 0.03;
-        if (this.y > maxY) this.vy -= 0.05;
+        if (this.x < margin) this.vx += 0.15;
+        if (this.x > this.boundsW - margin) this.vx -= 0.15;
+        if (this.y < margin) this.vy += 0.1;
+        if (this.y > maxY) this.vy -= 0.15;
 
-        // Apply velocity
-        this.x += this.vx * dt * 0.06;
-        this.y += this.vy * dt * 0.06;
+        // Apply velocity (dt in ms, scale to ~pixels/frame at 60fps)
+        this.x += this.vx * dt * 0.12;
+        this.y += this.vy * dt * 0.12;
 
         // Clamp position
         this.x = clamp(this.x, this.size, this.boundsW - this.size);
