@@ -8,8 +8,12 @@ const TwitchAPI = (function() {
   // Twitch Application Client ID
   const CLIENT_ID = '2i647lb57i37r5moz5ttlkihgxqdz9';
 
-  // GitHub Pages subdirectory - must match Twitch Application redirect URI
-  const REDIRECT_URI = window.location.origin + '/website_content/pages/twitch-emote-chat-web/auth-callback.html';
+  // Derive the redirect URI from wherever the app is deployed (e.g.
+  // https://havenscr.github.io/twitch-emote-chat-web/auth-callback.html).
+  // The same URL must be registered in the Twitch app's OAuth Redirect URLs.
+  const REDIRECT_URI = window.location.origin
+    + window.location.pathname.replace(/[^/]*$/, '')
+    + 'auth-callback.html';
 
   // OAuth scopes needed for full functionality
   const SCOPES = 'user:read:email user:read:follows user:read:emotes chat:read chat:edit';
