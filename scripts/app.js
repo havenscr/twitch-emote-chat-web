@@ -114,7 +114,7 @@ const App = (function() {
   const chatUsers = new Map();
 
   // App config
-  const APP_VERSION = '1.0.34';
+  const APP_VERSION = '1.0.38';
 
   // Settings keys
   const RECENT_KEY = 'twitch-recent-channels';
@@ -488,7 +488,8 @@ const App = (function() {
       }
     });
 
-    channelInput?.addEventListener('keypress', (e) => {
+    channelInput?.addEventListener('keydown', (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Enter') {
         const channel = parseChannel(channelInput.value);
         if (channel) {
@@ -514,16 +515,28 @@ const App = (function() {
 
     chatSendBtn?.addEventListener('click', sendChat);
 
-    chatInput?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !autocompleteMatches.length) {
-        sendChat();
-      }
-    });
-
     chatInput?.addEventListener('input', handleAutocomplete);
     chatInput?.addEventListener('input', updateTextEffectsPreview);
 
     chatInput?.addEventListener('keydown', (e) => {
+      // Ignore Enter while composing with an IME (e.g. Japanese keyboards)
+      if (e.isComposing || e.keyCode === 229) return;
+
+      if (e.key === 'Enter') {
+        // Enter selects only if user explicitly navigated to a suggestion;
+        // otherwise it sends the message (keydown is more reliable than the
+        // deprecated keypress event on mobile keyboards)
+        if (autocompleteMatches.length && autocompleteSelectedIndex >= 0) {
+          e.preventDefault();
+          selectAutocompleteEmote(autocompleteSelectedIndex);
+        } else {
+          e.preventDefault();
+          closeAutocomplete();
+          sendChat();
+        }
+        return;
+      }
+
       if (!autocompleteMatches.length) return;
 
       if (e.key === 'Tab') {
@@ -531,15 +544,6 @@ const App = (function() {
         // Tab selects first item if nothing selected (for keyboard navigation)
         const indexToSelect = autocompleteSelectedIndex >= 0 ? autocompleteSelectedIndex : 0;
         selectAutocompleteEmote(indexToSelect);
-      } else if (e.key === 'Enter') {
-        // Enter only selects if user has explicitly navigated to an item
-        if (autocompleteSelectedIndex >= 0) {
-          e.preventDefault();
-          selectAutocompleteEmote(autocompleteSelectedIndex);
-        } else {
-          // Nothing selected - close autocomplete and let Enter send the message
-          closeAutocomplete();
-        }
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         autocompleteSelectedIndex = Math.min(autocompleteSelectedIndex + 1, autocompleteMatches.length - 1);
@@ -1031,7 +1035,6 @@ const App = (function() {
    */
   function setupKeyboardDetection() {
     try {
-      const chatInputEl = document.getElementById('chat-input');
       const streamScreen = document.getElementById('stream-screen');
 
       // Use module-scope isIOS and isAndroid for device detection
@@ -1053,11 +1056,20 @@ const App = (function() {
       if (!streamScreen) return;
       // Use setProperty with priority to ensure CSS doesn't override
       streamScreen.style.setProperty('height', `${height}px`, 'important');
+
+      // Publish the keyboard overlap as a CSS variable so fixed-position
+      // elements (emote picker, CSS fallback rules) can lift above the
+      // keyboard. On Android (resizes-content) the layout viewport already
+      // shrinks, so this resolves to ~0; on iOS it equals keyboard height.
+      const vv = window.visualViewport;
+      const overlap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      document.documentElement.style.setProperty('--keyboard-height', `${Math.round(overlap)}px`);
     }
 
     function resetHeight() {
       if (!streamScreen) return;
       streamScreen.style.removeProperty('height');
+      document.documentElement.style.setProperty('--keyboard-height', '0px');
     }
 
     function openKeyboard() {
@@ -1089,20 +1101,30 @@ const App = (function() {
       }
     }
 
-    // Focus/blur listeners - these are the source of truth for keyboard state
-    if (chatInputEl) {
-      chatInputEl.addEventListener('focus', () => {
+    // Focus/blur listeners - these are the source of truth for keyboard state.
+    // Use focusin/focusout on the stream screen so EVERY text input there
+    // (chat input AND emote picker search) triggers keyboard layout handling.
+    function isTextInput(el) {
+      return !!el && el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'search');
+    }
+
+    if (streamScreen) {
+      streamScreen.addEventListener('focusin', (e) => {
+        if (!isTextInput(e.target)) return;
         isInputFocused = true;
         // Store initial height before keyboard opens
         if (window.visualViewport) {
           initialHeight = window.visualViewport.height;
         }
+        // Keep the layout pinned to the top - iOS pans the page when focusing
+        window.scrollTo(0, 0);
         // Android needs longer delay for keyboard animation
         const delay = isAndroid ? 150 : 50;
         setTimeout(openKeyboard, delay);
       });
 
-      chatInputEl.addEventListener('blur', () => {
+      streamScreen.addEventListener('focusout', (e) => {
+        if (!isTextInput(e.target)) return;
         isInputFocused = false;
         // Delay to handle tapping send button without closing keyboard prematurely
         // Android needs longer delay due to slower focus transfer
@@ -1191,7 +1213,7 @@ const App = (function() {
 
     // Handle orientation changes - force blur to reset everything cleanly
     // iOS keyboard behavior during rotation is unreliable, so we dismiss it entirely
-    window.addEventListener('orientationchange', () => {
+    function handleOrientationChange() {
       // Force blur any focused input to dismiss keyboard
       // This is the most reliable way to handle rotation - let user re-tap to open keyboard
       if (document.activeElement?.matches('input, textarea')) {
@@ -1234,7 +1256,14 @@ const App = (function() {
         // Final cleanup - ensure no stale state
         resetHeight();
       }, 300);
-    });
+    }
+
+    // window.orientationchange is deprecated and unreliable on some Android
+    // browsers - register both APIs (the handler is idempotent if both fire)
+    window.addEventListener('orientationchange', handleOrientationChange);
+    if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
+      screen.orientation.addEventListener('change', handleOrientationChange);
+    }
     } catch (error) {
       // Graceful degradation - if keyboard detection fails, let browser handle natively
       console.error('Keyboard detection setup failed:', error);
@@ -1422,7 +1451,7 @@ const App = (function() {
       const div = document.createElement('div');
       div.className = 'channel-item' + (isLive ? ' live' : '');
       div.innerHTML = `
-        <div class="channel-avatar">${displayName.charAt(0).toUpperCase()}</div>
+        <div class="channel-avatar">${escapeHtml(displayName.charAt(0).toUpperCase())}</div>
         <div class="channel-info">
           <div class="channel-name">${escapeHtml(displayName)}</div>
           ${showLiveInfo && channel.gameName ? `<div class="channel-game">${escapeHtml(channel.gameName)}</div>` : ''}
@@ -1694,9 +1723,13 @@ const App = (function() {
     } else {
       const time = msg.timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(/\s?(AM|PM)/i, '');
       const colon = msg.isAction ? '' : ':';
+      const color = escapeHtml(msg.color || '');
+      const badgesHtml = (msg.badges || [])
+        .map(b => `<img class="chat-badge" src="${escapeHtml(b.url)}" alt="${escapeHtml(b.name)}" title="${escapeHtml(b.name)}">`)
+        .join('');
 
       // No extra whitespace - name immediately followed by colon
-      div.innerHTML = `<span class="chat-time">${time}</span> <span class="chat-name" style="color: ${msg.color}">${escapeHtml(msg.displayName)}</span>${colon} <span class="chat-text"${msg.isAction ? ` style="color: ${msg.color}"` : ''}>${msg.messageHtml || escapeHtml(msg.message)}</span>`;
+      div.innerHTML = `<span class="chat-time">${time}</span> ${badgesHtml}<span class="chat-name" style="color: ${color}">${escapeHtml(msg.displayName)}</span>${colon} <span class="chat-text"${msg.isAction ? ` style="color: ${color}"` : ''}>${msg.messageHtml || escapeHtml(msg.message)}</span>`;
 
       // Add click handler ONLY on the username for reply-to functionality
       const nameSpan = div.querySelector('.chat-name');
@@ -1762,7 +1795,15 @@ const App = (function() {
     div.className = 'chat-system';
     div.textContent = text;
     chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Don't yank the scroll position if the user has scrolled up
+    if (!chatPaused) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    while (chatMessages.children.length > 150) {
+      chatMessages.removeChild(chatMessages.firstChild);
+    }
   }
 
   /**
@@ -1880,7 +1921,7 @@ const App = (function() {
       const div = document.createElement('div');
       div.className = 'emote-item';
       div.title = `${code} (${data.provider})`;
-      div.innerHTML = `<img src="${data.url}" alt="${code}" loading="lazy">`;
+      div.innerHTML = `<img src="${escapeHtml(data.url)}" alt="${escapeHtml(code)}" loading="lazy">`;
       div.addEventListener('click', () => insertEmote(code));
       emoteGrid.appendChild(div);
     }
@@ -2193,7 +2234,7 @@ const App = (function() {
       } else {
         // Render emote item with image
         item.innerHTML = `
-          <img src="${data.url}" alt="${code}" loading="lazy">
+          <img src="${escapeHtml(data.url)}" alt="${escapeHtml(code)}" loading="lazy">
           <span class="emote-name">${escapeHtml(code)}</span>
           <span class="emote-provider">${getProviderLabel(data.provider)}</span>
         `;
@@ -2336,12 +2377,15 @@ const App = (function() {
   }
 
   /**
-   * Escape HTML
+   * Escape HTML (string-based - safe for text nodes and attribute values)
    */
   function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
@@ -2526,8 +2570,11 @@ const App = (function() {
 
       if (streamInfo && streamInfo.isLive) {
         updateStreamInfoBar(streamInfo.title, streamInfo.gameName, streamInfo.viewerCount);
-      } else {
+      } else if (streamInfo) {
         updateStreamInfoBar('Offline', '', 0);
+      } else {
+        // null = no data (e.g. anonymous user) - don't falsely claim "Offline"
+        updateStreamInfoBar('Stream info unavailable (login required)', '', 0);
       }
     } catch (e) {
       console.warn('Failed to fetch stream info:', e);

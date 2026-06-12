@@ -904,9 +904,18 @@ input[type="text"]::placeholder {
   padding-bottom: var(--spacing-sm);
 }
 
-/* iOS Safari keyboard handling - JS sets --keyboard-height dynamically */
+/* iOS Safari keyboard handling - JS sets --keyboard-height dynamically.
+   This is the CSS fallback; JS also sets an inline height on #stream-screen
+   from the Visual Viewport, which takes precedence when available. */
 .keyboard-visible #stream-screen {
   height: calc(100dvh - var(--keyboard-height));
+}
+
+/* Lift fixed-bottom panels above the keyboard. On iOS the layout viewport
+   doesn't shrink when the keyboard opens, so bottom: 0 would sit behind it.
+   On Android --keyboard-height resolves to ~0 (the viewport itself shrinks). */
+.keyboard-visible .emote-picker {
+  bottom: var(--keyboard-height, 0px);
 }
 
 .keyboard-visible .stream-container {

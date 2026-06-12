@@ -186,6 +186,10 @@
   }
 
   .video-section {
+    position: relative; /* Override fixed positioning for side-by-side flex layout */
+    top: auto;
+    left: auto;
+    right: auto;
     flex: 1;
     height: 100%;
     max-height: none;
@@ -194,7 +198,12 @@
   .chat-section {
     flex: 0 0 340px;
     height: 100%;
+    margin-top: 0; /* Remove mobile offset - video is no longer fixed */
     border-left: 1px solid var(--border-color);
+  }
+
+  .stream-info-bar {
+    margin-top: 0;
   }
 
   /* Login screen wider */

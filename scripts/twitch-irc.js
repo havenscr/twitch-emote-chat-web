@@ -33,6 +33,7 @@ const TwitchIRC = (function() {
   let isConnected = false;
   let reconnectTimeout = null;
   let connectionId = 0;
+  let authFailed = false;
 
   // Callbacks
   let onMessageCallback = null;
@@ -41,67 +42,31 @@ const TwitchIRC = (function() {
   let onDisconnectedCallback = null;
 
   /**
-   * Fetch global Twitch badges
+   * Fetch global Twitch badges (Helix - requires login; falls back to
+   * FALLBACK_BADGE_URLS for anonymous users)
    */
   async function fetchGlobalBadges() {
     if (Object.keys(globalBadges).length > 0) return;
+    if (typeof TwitchAPI === 'undefined' || !TwitchAPI.isLoggedIn()) return;
 
     try {
-      const res = await fetch('https://badges.twitch.tv/v1/badges/global/display');
-      if (res.ok) {
-        const data = await res.json();
-        for (const [badgeName, badgeData] of Object.entries(data.badge_sets || {})) {
-          globalBadges[badgeName] = {};
-          for (const [version, versionData] of Object.entries(badgeData.versions || {})) {
-            globalBadges[badgeName][version] = versionData.image_url_2x || versionData.image_url_1x;
-          }
-        }
-      }
+      globalBadges = await TwitchAPI.getGlobalChatBadges();
     } catch (e) {
       console.warn('TwitchIRC: Failed to fetch global badges:', e);
     }
   }
 
   /**
-   * Fetch channel-specific badges
+   * Fetch channel-specific badges (Helix - requires login)
    */
   async function fetchChannelBadges(channelName) {
     channelBadges = {};
-
-    // Get channel ID from 7TV or FFZ
-    let channelId = null;
+    if (typeof TwitchAPI === 'undefined' || !TwitchAPI.isLoggedIn()) return;
 
     try {
-      const res = await fetch(`https://7tv.io/v3/users/twitch/${channelName}`);
-      if (res.ok) {
-        const data = await res.json();
-        channelId = data.id;
-      }
-    } catch (e) {}
-
-    if (!channelId) {
-      try {
-        const res = await fetch(`https://api.frankerfacez.com/v1/room/${channelName}`);
-        if (res.ok) {
-          const data = await res.json();
-          channelId = data.room?.twitch_id;
-        }
-      } catch (e) {}
-    }
-
-    if (!channelId) return;
-
-    try {
-      const res = await fetch(`https://badges.twitch.tv/v1/badges/channels/${channelId}/display`);
-      if (res.ok) {
-        const data = await res.json();
-        for (const [badgeName, badgeData] of Object.entries(data.badge_sets || {})) {
-          channelBadges[badgeName] = {};
-          for (const [version, versionData] of Object.entries(badgeData.versions || {})) {
-            channelBadges[badgeName][version] = versionData.image_url_2x || versionData.image_url_1x;
-          }
-        }
-      }
+      const user = await TwitchAPI.getUserByLogin(channelName);
+      if (!user) return;
+      channelBadges = await TwitchAPI.getChannelChatBadges(user.id);
     } catch (e) {
       console.warn('TwitchIRC: Failed to fetch channel badges:', e);
     }
@@ -139,6 +104,23 @@ const TwitchIRC = (function() {
   }
 
   /**
+   * Unescape IRCv3 tag values (\s = space, \: = semicolon, \\ = backslash, \r, \n)
+   */
+  function unescapeTagValue(value) {
+    if (value.indexOf('\\') === -1) return value;
+    return value.replace(/\\(.?)/g, (_, c) => {
+      switch (c) {
+        case 's': return ' ';
+        case ':': return ';';
+        case 'r': return '\r';
+        case 'n': return '\n';
+        case '\\': return '\\';
+        default: return c;
+      }
+    });
+  }
+
+  /**
    * Parse IRC message with tags
    */
   function parseIRCMessage(raw) {
@@ -155,8 +137,10 @@ const TwitchIRC = (function() {
       idx = spaceIdx + 1;
 
       tagStr.split(';').forEach(tag => {
-        const [key, value] = tag.split('=');
-        tags[key] = value || true;
+        const eqIdx = tag.indexOf('=');
+        const key = eqIdx === -1 ? tag : tag.substring(0, eqIdx);
+        const value = eqIdx === -1 ? '' : tag.substring(eqIdx + 1);
+        tags[key] = value ? unescapeTagValue(value) : true;
       });
     }
 
@@ -259,15 +243,15 @@ const TwitchIRC = (function() {
         emoteMatches.push({
           start: emote.start,
           end: emote.end,
-          html: `<img class="chat-emote" src="${emote.url}" alt="${emote.text}" title="${emote.text}">`
+          html: `<img class="chat-emote" src="${escapeHtml(emote.url)}" alt="${escapeHtml(emote.text)}" title="${escapeHtml(emote.text)}">`
         });
       }
     }
 
-    // Find third-party emotes
-    if (EmoteLoader.isEmotesLoaded() && Object.keys(thirdPartyEmotes).length > 0) {
-      const emoteCodes = Object.keys(thirdPartyEmotes).sort((a, b) => b.length - a.length);
-
+    // Find third-party emotes using the first-character index so each position
+    // only tests codes that could actually match (instead of every loaded emote)
+    const codeIndex = EmoteLoader.getCodeIndex ? EmoteLoader.getCodeIndex() : null;
+    if (EmoteLoader.isEmotesLoaded() && codeIndex && codeIndex.size > 0) {
       const isWordBoundary = (char) => {
         if (!char) return true;
         return !/[a-zA-Z0-9_]/.test(char);
@@ -275,31 +259,38 @@ const TwitchIRC = (function() {
 
       let pos = 0;
       while (pos < message.length) {
+        const charBefore = pos > 0 ? message[pos - 1] : null;
+        if (!isWordBoundary(charBefore)) {
+          pos++;
+          continue;
+        }
+
         let foundEmote = null;
         let repeatCount = 0;
+        const candidates = codeIndex.get(message[pos]);
 
-        for (const code of emoteCodes) {
-          if (message.substring(pos, pos + code.length) === code) {
-            const overlaps = emoteMatches.some(m =>
-              (pos >= m.start && pos <= m.end) || (pos + code.length - 1 >= m.start && pos + code.length - 1 <= m.end)
-            );
-            if (overlaps) continue;
+        if (candidates) {
+          for (const code of candidates) {
+            if (message.startsWith(code, pos)) {
+              const overlaps = emoteMatches.some(m =>
+                (pos >= m.start && pos <= m.end) || (pos + code.length - 1 >= m.start && pos + code.length - 1 <= m.end)
+              );
+              if (overlaps) continue;
 
-            repeatCount = 1;
-            let checkPos = pos + code.length;
-            while (message.substring(checkPos, checkPos + code.length) === code) {
-              repeatCount++;
-              checkPos += code.length;
-            }
+              repeatCount = 1;
+              let checkPos = pos + code.length;
+              while (message.startsWith(code, checkPos)) {
+                repeatCount++;
+                checkPos += code.length;
+              }
 
-            const charBefore = pos > 0 ? message[pos - 1] : null;
-            const totalEmoteLength = code.length * repeatCount;
-            const charAfter = message[pos + totalEmoteLength] || null;
-            const atWordBoundary = isWordBoundary(charBefore) && isWordBoundary(charAfter);
+              const totalEmoteLength = code.length * repeatCount;
+              const charAfter = message[pos + totalEmoteLength] || null;
 
-            if (atWordBoundary) {
-              foundEmote = code;
-              break;
+              if (isWordBoundary(charAfter)) {
+                foundEmote = code;
+                break;
+              }
             }
           }
         }
@@ -312,7 +303,7 @@ const TwitchIRC = (function() {
             emoteMatches.push({
               start: emotePos,
               end: emotePos + foundEmote.length - 1,
-              html: `<img class="chat-emote" src="${emoteData.url}" alt="${foundEmote}" title="${foundEmote} (${emoteData.provider})">`
+              html: `<img class="chat-emote" src="${escapeHtml(emoteData.url)}" alt="${escapeHtml(foundEmote)}" title="${escapeHtml(`${foundEmote} (${emoteData.provider})`)}">`
             });
           }
           pos += totalLength;
@@ -348,12 +339,26 @@ const TwitchIRC = (function() {
   }
 
   /**
-   * Escape HTML
+   * Escape HTML (string-based - safe for text nodes and attribute values)
    */
   function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * Validate a color from IRC tags - tags can come from untrusted sources
+   * (e.g. the recent-messages history API), so never inject them raw into CSS
+   */
+  function sanitizeColor(color, fallback) {
+    if (typeof color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+      return color;
+    }
+    return fallback;
   }
 
   /**
@@ -363,10 +368,9 @@ const TwitchIRC = (function() {
     const tags = parsed.tags;
     const username = parsed.prefix?.split('!')[0] || 'anonymous';
     const displayName = tags['display-name'] || username || 'Anonymous';
-    const color = tags.color || getDefaultColor(displayName);
+    const color = sanitizeColor(tags.color, getDefaultColor(displayName));
     const message = parsed.params[1] || '';
     const badges = parseBadges(tags.badges);
-    const emotes = parseTwitchEmotes(tags.emotes, message);
     const timestamp = new Date(parseInt(tags['tmi-sent-ts']) || Date.now());
 
     // Check for @mention
@@ -375,6 +379,10 @@ const TwitchIRC = (function() {
 
     let isAction = message.startsWith('\u0001ACTION') && message.endsWith('\u0001');
     let cleanMessage = isAction ? message.slice(8, -1) : message;
+
+    // Emote indices from Twitch are relative to the message text without the
+    // CTCP ACTION wrapper, so parse against the cleaned message
+    const emotes = parseTwitchEmotes(tags.emotes, cleanMessage);
 
     const msgData = {
       id: tags.id || Date.now().toString(),
@@ -402,9 +410,10 @@ const TwitchIRC = (function() {
    */
   function handleUserNotice(parsed) {
     const tags = parsed.tags;
-    // system-msg may be missing, a string, or unexpectedly another type
+    // system-msg may be missing or a non-string (empty tags parse as `true`);
+    // escaped spaces are already unescaped by the tag parser
     const systemMsg = tags['system-msg'];
-    const systemMessageText = typeof systemMsg === 'string' ? systemMsg.replace(/\\s/g, ' ') : (systemMsg || '');
+    const systemMessageText = typeof systemMsg === 'string' ? systemMsg : '';
 
     const msgData = {
       id: tags.id || Date.now().toString(),
@@ -412,7 +421,7 @@ const TwitchIRC = (function() {
       noticeType: tags['msg-id'],
       systemMessage: systemMessageText,
       displayName: tags['display-name'] || '',
-      color: tags.color || '#9147ff',
+      color: sanitizeColor(tags.color, '#9147ff'),
       message: parsed.params[1] || '',
       timestamp: new Date(parseInt(tags['tmi-sent-ts']) || Date.now()),
     };
@@ -474,11 +483,20 @@ const TwitchIRC = (function() {
           handleUserNotice(parsed);
           break;
 
-        case 'NOTICE':
-          if (onSystemCallback) {
-            onSystemCallback(parsed.params[1] || 'Notice from server');
+        case 'NOTICE': {
+          const noticeText = parsed.params[1] || 'Notice from server';
+          // Stop the reconnect loop on auth failures - retrying with the same
+          // bad token would hammer the server and spam the chat with notices
+          if (/login authentication failed|improperly formatted auth/i.test(noticeText)) {
+            authFailed = true;
+            if (onSystemCallback) {
+              onSystemCallback('Login expired. Please log in again to chat.');
+            }
+          } else if (onSystemCallback) {
+            onSystemCallback(noticeText);
           }
           break;
+        }
       }
     }
   }
@@ -534,7 +552,7 @@ const TwitchIRC = (function() {
       onDisconnectedCallback();
     }
 
-    if (channel) {
+    if (channel && !authFailed) {
       if (onSystemCallback) {
         onSystemCallback('Disconnected. Reconnecting...');
       }
@@ -569,6 +587,7 @@ const TwitchIRC = (function() {
 
     connectionId++;
     const thisConnectionId = connectionId;
+    authFailed = false;
 
     channel = channelName.toLowerCase().replace('#', '');
     username = options.username || `justinfan${Math.floor(Math.random() * 99999)}`;

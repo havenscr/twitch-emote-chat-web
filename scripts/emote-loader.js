@@ -9,6 +9,11 @@ const EmoteLoader = (function() {
   let cachedEmotes = {};
   let currentChannel = null;
   let isLoaded = false;
+  let loadingChannel = null;
+  let loadingPromise = null;
+  // Emote codes indexed by first character, each bucket sorted longest-first.
+  // Lets the chat renderer test only plausible candidates per position.
+  let codeIndex = new Map();
 
   /**
    * Resolve Twitch username to user ID using IVR API
@@ -225,7 +230,34 @@ const EmoteLoader = (function() {
   }
 
   /**
+   * Build the first-character index over the cached emotes
+   */
+  function buildCodeIndex() {
+    codeIndex = new Map();
+    for (const code of Object.keys(cachedEmotes)) {
+      const first = code[0];
+      const bucket = codeIndex.get(first);
+      if (bucket) {
+        bucket.push(code);
+      } else {
+        codeIndex.set(first, [code]);
+      }
+    }
+    for (const bucket of codeIndex.values()) {
+      bucket.sort((a, b) => b.length - a.length);
+    }
+  }
+
+  /**
+   * Get the emote code index (Map of first char -> codes, longest first)
+   */
+  function getCodeIndex() {
+    return codeIndex;
+  }
+
+  /**
    * Load all emotes for a channel
+   * Coalesces concurrent calls for the same channel into one fetch
    */
   async function loadEmotes(channelName) {
     if (currentChannel === channelName && isLoaded) {
@@ -233,6 +265,23 @@ const EmoteLoader = (function() {
       return cachedEmotes;
     }
 
+    if (loadingChannel === channelName && loadingPromise) {
+      return loadingPromise;
+    }
+
+    loadingChannel = channelName;
+    loadingPromise = doLoadEmotes(channelName);
+    try {
+      return await loadingPromise;
+    } finally {
+      if (loadingChannel === channelName) {
+        loadingChannel = null;
+        loadingPromise = null;
+      }
+    }
+  }
+
+  async function doLoadEmotes(channelName) {
     console.log('EmoteLoader: Loading emotes for', channelName);
     DebugLogger.info('EmoteLoader', 'Loading emotes', { channel: channelName });
     currentChannel = channelName;
@@ -247,6 +296,11 @@ const EmoteLoader = (function() {
       TwitchAPI.isLoggedIn() ? TwitchAPI.getUserEmotes() : Promise.resolve({})
     ]);
 
+    // User switched channels while this load was in flight - discard stale results
+    if (currentChannel !== channelName) {
+      return cachedEmotes;
+    }
+
     // Merge all emotes (later sources override earlier for duplicates)
     cachedEmotes = {
       ...twitchGlobal,
@@ -258,6 +312,7 @@ const EmoteLoader = (function() {
     };
 
     isLoaded = true;
+    buildCodeIndex();
 
     const counts = {
       twitchGlobal: Object.keys(twitchGlobal).length,
@@ -428,12 +483,14 @@ const EmoteLoader = (function() {
     cachedEmotes = {};
     currentChannel = null;
     isLoaded = false;
+    codeIndex = new Map();
   }
 
   // Public API
   return {
     loadEmotes,
     getEmotes,
+    getCodeIndex,
     getEmotesByProvider,
     searchEmotes,         // Returns only channel-available emotes
     searchEmotesLocal,    // Sync version - local cache only
