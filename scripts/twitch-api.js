@@ -339,6 +339,97 @@ const TwitchAPI = (function() {
   }
 
   /**
+   * Look up a user by login name
+   */
+  async function getUserByLogin(login) {
+    const token = getAccessToken();
+    if (!token) return null;
+
+    try {
+      const response = await fetch(
+        `https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`,
+        {
+          headers: {
+            'Client-ID': CLIENT_ID,
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      return data.data?.[0] || null;
+    } catch (e) {
+      console.warn('TwitchAPI: Failed to look up user:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Map a Helix badge response to { setId: { versionId: imageUrl } }
+   */
+  function mapBadgeSets(data) {
+    const sets = {};
+    for (const set of data.data || []) {
+      sets[set.set_id] = {};
+      for (const version of set.versions || []) {
+        sets[set.set_id][version.id] = version.image_url_2x || version.image_url_1x;
+      }
+    }
+    return sets;
+  }
+
+  /**
+   * Fetch global chat badges (Helix)
+   */
+  async function getGlobalChatBadges() {
+    const token = getAccessToken();
+    if (!token) return {};
+
+    try {
+      const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
+        headers: {
+          'Client-ID': CLIENT_ID,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) return {};
+      return mapBadgeSets(await response.json());
+    } catch (e) {
+      console.warn('TwitchAPI: Failed to fetch global badges:', e);
+      return {};
+    }
+  }
+
+  /**
+   * Fetch channel chat badges (Helix)
+   */
+  async function getChannelChatBadges(broadcasterId) {
+    const token = getAccessToken();
+    if (!token || !broadcasterId) return {};
+
+    try {
+      const response = await fetch(
+        `https://api.twitch.tv/helix/chat/badges?broadcaster_id=${encodeURIComponent(broadcasterId)}`,
+        {
+          headers: {
+            'Client-ID': CLIENT_ID,
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) return {};
+      return mapBadgeSets(await response.json());
+    } catch (e) {
+      console.warn('TwitchAPI: Failed to fetch channel badges:', e);
+      return {};
+    }
+  }
+
+  /**
    * Get stream info for a channel
    */
   async function getStreamInfo(channelLogin) {
@@ -392,6 +483,9 @@ const TwitchAPI = (function() {
     getLiveStreams,
     getFollowedChannelsWithLiveStatus,
     getUserEmotes,
+    getUserByLogin,
+    getGlobalChatBadges,
+    getChannelChatBadges,
     getStreamInfo
   };
 })();
