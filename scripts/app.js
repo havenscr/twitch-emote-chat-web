@@ -114,7 +114,7 @@ const App = (function() {
   const chatUsers = new Map();
 
   // App config
-  const APP_VERSION = '1.0.40';
+  const APP_VERSION = '1.0.41';
 
   // Settings keys
   const RECENT_KEY = 'twitch-recent-channels';
@@ -1072,6 +1072,17 @@ const App = (function() {
       document.documentElement.style.setProperty('--keyboard-height', '0px');
     }
 
+    // Keep --app-height in sync with the real viewport. iOS leaves 100dvh
+    // stale (notably in standalone PWAs and after keyboard/toolbar
+    // transitions), which leaves a dead gap below the chat input. Skipped
+    // while an input is focused so keyboard layout stays on its own path.
+    function updateAppHeight() {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      if (isInputFocused || document.body.classList.contains('keyboard-visible')) return;
+      document.documentElement.style.setProperty('--app-height', `${Math.round(vv.height)}px`);
+    }
+
     function openKeyboard() {
       // Skip keyboard handling if disabled
       if (!keyboardHandlingEnabled) return;
@@ -1087,6 +1098,9 @@ const App = (function() {
     function closeKeyboard() {
       document.body.classList.remove('keyboard-visible');
       resetHeight();
+
+      // Re-measure once the keyboard close animation settles
+      setTimeout(updateAppHeight, 250);
 
       // Reposition autocomplete if open (it needs to move down with the chat input)
       if (emoteAutocomplete?.classList.contains('open')) {
@@ -1201,6 +1215,12 @@ const App = (function() {
 
       window.visualViewport.addEventListener('resize', handleViewportResize);
 
+      // Track viewport size for --app-height whenever the keyboard is closed
+      // (toolbar show/hide, rotation, PWA launch with stale dvh)
+      window.visualViewport.addEventListener('resize', updateAppHeight);
+      updateAppHeight();
+      setTimeout(updateAppHeight, 300);
+
       // For iOS Safari, prevent page from scrolling when keyboard pushes viewport
       if (isIOS) {
         window.visualViewport.addEventListener('scroll', () => {
@@ -1255,6 +1275,7 @@ const App = (function() {
         }
         // Final cleanup - ensure no stale state
         resetHeight();
+        updateAppHeight();
       }, 300);
     }
 
