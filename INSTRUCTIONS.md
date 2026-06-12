@@ -2,7 +2,7 @@
 
 A mobile-friendly Twitch chat app with FFZ, 7TV, and BTTV emotes that the official app doesn't support.
 
-**App URL:** https://analyticendeavors.github.io/website_content/pages/twitch-emote-chat-web/
+**App URL:** https://havenscr.github.io/twitch-emote-chat-web/
 
 ---
 

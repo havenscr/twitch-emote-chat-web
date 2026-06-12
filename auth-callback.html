@@ -77,7 +77,7 @@
       <h1 class="error">Login Failed</h1>
       <p id="error-message">An error occurred during login.</p>
       <div id="error-details" class="error-details" style="display: none;"></div>
-      <a href="/website_content/pages/twitch-emote-chat-web/" class="back-link">Back to app</a>
+      <a href="./" class="back-link">Back to app</a>
     </div>
   </div>
 
@@ -130,8 +130,8 @@
           localStorage.setItem('twitch-scopes', scope);
         }
 
-        // Redirect to main app
-        window.location.href = '/website_content/pages/twitch-emote-chat-web/';
+        // Redirect to main app (same directory as this callback page)
+        window.location.href = './';
       } catch (e) {
         showError('Failed to save login', 'Could not store authentication data. Please ensure cookies and localStorage are enabled.');
       }
