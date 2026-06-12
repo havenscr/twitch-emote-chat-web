@@ -6,7 +6,7 @@
 
 const TwitchAPI = (function() {
   // Twitch Application Client ID (webapp1985)
-  const CLIENT_ID = 'g1eufw0fc4fgusrgdz04';
+  const CLIENT_ID = 'g1eufw0fc4fgusrgdz04jeq33cjcc6';
 
   // Derive the redirect URI from wherever the app is deployed (e.g.
   // https://havenscr.github.io/twitch-emote-chat-web/auth-callback.html).

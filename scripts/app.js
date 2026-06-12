@@ -114,7 +114,7 @@ const App = (function() {
   const chatUsers = new Map();
 
   // App config
-  const APP_VERSION = '1.0.39';
+  const APP_VERSION = '1.0.40';
 
   // Settings keys
   const RECENT_KEY = 'twitch-recent-channels';
